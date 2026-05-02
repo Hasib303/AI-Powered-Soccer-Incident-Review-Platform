@@ -1,0 +1,8 @@
+# Ignore EVERYTHING at the project root by default.
+/*
+
+# Whitelist only what should land in the remote.
+!/.gitignore
+!/.github
+!/backend
+!/frontend
