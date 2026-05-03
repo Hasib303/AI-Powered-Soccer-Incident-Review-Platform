@@ -1,0 +1,86 @@
+@import "tailwindcss";
+@plugin "tailwindcss-animate";
+
+@theme inline {
+  /* Brand palette — dark teal operational UI from the wireframes. */
+  --color-bg: #0b1418;
+  --color-surface: #0f1b22;
+  --color-surface-2: #14252e;
+  --color-border: #1f3640;
+  --color-muted: #6f8a92;
+  --color-text: #e5f2ef;
+  --color-text-dim: #9bb4bb;
+  --color-primary: #22d3b5;
+  --color-primary-foreground: #04161a;
+  --color-accent: #0ea5a4;
+  --color-danger: #f97070;
+  --color-warning: #facc15;
+  --color-success: #34d399;
+
+  --color-background: var(--color-bg);
+  --color-foreground: var(--color-text);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Dotted grid texture for the empty console area */
+.bg-pitch-grid {
+  background-image:
+    radial-gradient(rgba(34, 211, 181, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Pulse used by the live "REC" pill */
+@keyframes rec-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(249, 112, 112, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(249, 112, 112, 0);
+  }
+}
+
+.rec-pulse {
+  animation: rec-pulse 1.6s infinite;
+}
+
+/* Custom scrollbar in dark theme */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-muted);
+}
