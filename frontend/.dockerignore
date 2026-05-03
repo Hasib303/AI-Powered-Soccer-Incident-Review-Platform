@@ -1,0 +1,31 @@
+# Build context exclusions for the frontend image.
+
+node_modules/
+.next/
+.turbo/
+out/
+.cache/
+coverage/
+
+# Local secrets
+.env
+.env.local
+.env.*.local
+
+# OS / editor cruft
+.DS_Store
+.vscode/
+.idea/
+
+# VCS
+.git/
+.gitignore
+
+# Tests / dev artefacts
+playwright-report/
+test-results/
+
+# Tracked but unneeded in the image
+README.md
+AGENTS.md
+CLAUDE.md
