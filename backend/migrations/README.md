@@ -8,6 +8,8 @@ Supabase backend. They run in numeric order:
 | `0001_init.sql` | Schema: `team_accounts`, `users_profile`, `leagues`, `teams`, `matches`, `match_assignments`, `incidents`, `audit_events`. Realtime publication on `incidents`. |
 | `0002_rls.sql` | Row-Level Security policies. Helper functions `current_team_account()`, `current_role_name()`, `is_official()`, `is_admin()`, `is_viewer()`, `user_assigned_to_match()`. |
 | `0003_storage.sql` | Storage object policies bound to the team-prefixed path convention. |
+| `0004_video_source.sql` | BRD round 2: adds `video_source_kind` enum (sample/upload/rtmp/hls), `video_source_path`, `video_stream_url`, `calibration jsonb`, `stream_state` enum to `matches`. Extends realtime publication to include `matches` so the live stream banner sees state transitions. |
+| `0005_audit_publish.sql` | Adds `audit_events` to the realtime publication for future admin dashboards. |
 | `seed.sql` | Demo data — one team account (`Riverside FC`), one league, three teams, two matches, one pre-resolved incident. |
 
 ## Apply to a Supabase Cloud project
