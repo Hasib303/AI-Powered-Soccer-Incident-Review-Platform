@@ -5,12 +5,15 @@ from __future__ import annotations
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 
 from pipeline.detection import get_model, is_model_loaded
+from pipeline.stream import stop_all as stop_all_streams
 from routes.analyze import router as analyze_router
 from routes.extract import router as extract_router
+from routes.streams import router as streams_router
 from schemas.payload import HealthResponse
 from settings import get_settings
 
@@ -26,7 +29,14 @@ async def lifespan(_app: FastAPI):
         logger.info("YOLO model preloaded.")
     except Exception:  # noqa: BLE001
         logger.exception("YOLO model preload failed; will retry on first request.")
-    yield
+    try:
+        yield
+    finally:
+        # Make sure FFmpeg subprocesses don't outlive the API.
+        try:
+            stop_all_streams()
+        except Exception:  # noqa: BLE001
+            logger.exception("Error stopping stream workers during shutdown.")
 
 
 def create_app() -> FastAPI:
@@ -53,8 +63,21 @@ def create_app() -> FastAPI:
             samples_dir=str(settings.samples_path),
         )
 
+    @app.get("/samples/{clip_id}.mp4", tags=["samples"])
+    def serve_sample_clip(clip_id: str) -> FileResponse:
+        """Serve a sample MP4 directly so the frontend can play it without
+        re-uploading to Supabase Storage. Demo-only convenience."""
+        path = settings.samples_path / f"{clip_id}.mp4"
+        if not path.exists():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No sample clip for id '{clip_id}'.",
+            )
+        return FileResponse(path, media_type="video/mp4", filename=path.name)
+
     app.include_router(analyze_router)
     app.include_router(extract_router)
+    app.include_router(streams_router)
     return app
 
 
