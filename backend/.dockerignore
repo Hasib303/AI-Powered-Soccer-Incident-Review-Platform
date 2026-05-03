@@ -1,0 +1,46 @@
+# Build context exclusions for the AI service image. Everything listed here
+# stays out of the Docker layer — keeps the image small and avoids leaking
+# secrets or local artefacts.
+
+# Virtualenvs and caches
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Local secrets and overrides
+.env
+.env.local
+
+# Sample clips + downloaded model weights — fetched at build time / mounted
+# at runtime instead.
+samples/*.mp4
+samples/*.mov
+samples/*.avi
+samples/*.jpg
+samples/*.png
+samples/preview_*
+samples/*.detections.json
+samples/*.annotated.jpg
+yolov8*.pt
+*.onnx
+
+# Stream worker scratch space
+tmp/
+
+# OS / editor cruft
+.DS_Store
+.vscode/
+.idea/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# VCS
+.git/
+.gitignore

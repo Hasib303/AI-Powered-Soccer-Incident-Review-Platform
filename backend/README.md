@@ -89,12 +89,32 @@ See `.env.example`. The interesting ones:
 The two `/analyze/*` endpoints return the exact `ai_payload` shape that
 gets written to `incidents.ai_payload` in Postgres.
 
+## Run via Docker (production-like, portable)
+
+A `Dockerfile` ships in this directory. From the repo root:
+
+```bash
+docker compose up --build backend     # builds and runs just the AI service
+# or
+docker compose up --build              # whole stack (backend + frontend)
+```
+
+Image details:
+
+- Base: `python:3.12-slim`
+- System deps: `ffmpeg`, `libgl1`, `libglib2.0-0` (OpenCV needs the last two)
+- Locked Python deps via `uv sync --frozen --no-dev`
+- YOLOv8n weights pre-downloaded at build time so the first `/analyze`
+  call doesn't pay the model-fetch cost
+- Healthcheck on `/health`
+- Listens on `$PORT` (default `8000`); also exposes `7860` for Hugging Face Spaces
+
 ## Deploying
 
-Today's plan: run locally on `localhost:8000`. For a public demo URL,
-push this directory to a Hugging Face Space using the Docker SDK on the
-free CPU tier. No card required at signup. A `Dockerfile` will be added
-when we get to deployment (Task #10).
+Same image works as a Hugging Face Space (Docker SDK, free CPU tier — no
+card required at signup). Create a Space, set the SDK to `Docker`, and
+push this directory to the Space's git repo. The Space builds the
+`Dockerfile` and exposes the `$PORT` automatically.
 
 ## Sample clips
 
