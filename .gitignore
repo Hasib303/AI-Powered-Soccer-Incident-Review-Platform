@@ -6,3 +6,9 @@
 !/.github
 !/backend
 !/frontend
+!/docker-compose.yml
+!/.env.example
+!/TESTING.md
+
+# Always exclude the real .env even if a future whitelist glob matches it.
+.env

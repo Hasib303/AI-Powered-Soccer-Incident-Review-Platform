@@ -1,0 +1,83 @@
+# Atlético Intelligence — local stack
+#
+# `docker compose up --build` brings up:
+#   - backend (Python AI/CV service) at http://localhost:8000
+#   - frontend (Next.js) at http://localhost:3000
+#
+# Supabase still runs in the cloud (free tier) — see SETUP below.
+# Apply the migrations from backend/migrations/ to your Supabase project once,
+# then drop your keys into a `.env` file at the repo root and run compose.
+#
+# .env contents (copy from `.env.example`):
+#
+#   NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+#   NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+#   SUPABASE_URL=https://<project-ref>.supabase.co
+#   SUPABASE_ANON_KEY=...
+#   SUPABASE_SERVICE_ROLE_KEY=...
+#   SUPABASE_JWT_SECRET=...
+
+services:
+  backend:
+    build:
+      context: ./backend
+    image: atletico-backend:latest
+    ports:
+      - "8000:8000"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8000
+      LOG_LEVEL: info
+      ALLOWED_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      SUPABASE_JWT_SECRET: ${SUPABASE_JWT_SECRET}
+      CLIPS_BUCKET: clips
+      SNAPSHOTS_BUCKET: snapshots
+      YOLO_MODEL: yolov8n.pt
+      YOLO_PERSON_CONFIDENCE: "0.2"
+      YOLO_BALL_CONFIDENCE: "0.4"
+      YOLO_IMGSZ: "1920"
+      HUMAN_REVIEW_THRESHOLD: "0.6"
+      AUTH_REQUIRED: "false"
+    volumes:
+      # Persist the rolling stream buffer + extracted clips across restarts.
+      - backend-tmp:/app/tmp
+      # Optional: drop sample clips on the host into ./backend/samples and
+      # they'll be visible to the container without rebuild.
+      - ./backend/samples:/app/samples
+    healthcheck:
+      test: ["CMD", "curl", "-fsSL", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 25s
+      retries: 3
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # NEXT_PUBLIC_* must be available at *build* time (inlined into the
+        # client bundle). Pulled from the root .env file by docker compose.
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    image: atletico-frontend:latest
+    ports:
+      - "3000:3000"
+    environment:
+      # Server-side env (NEXT_PUBLIC_* still needed at SSR time).
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      # Use the docker-compose service name so server actions reach the AI
+      # service over the internal network.
+      AI_SERVICE_URL: http://backend:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  backend-tmp:
