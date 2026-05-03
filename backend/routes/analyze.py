@@ -9,11 +9,12 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from auth import AuthContext, get_auth_context
-from pipeline.calibration import Calibration, load_calibration, project_image_to_pitch
+from pipeline.calibration import Calibration, calibration_from_json, project_image_to_pitch
 from pipeline.detection import Detection, detect_frame
 from pipeline.extract import read_frame_ms
 from pipeline.goal_line import GoalLineInputs, compute_goal_line
 from pipeline.offside import OffsideInputs, compute_offside
+from pipeline.source import ResolvedSource, resolve_match_source
 from schemas.payload import (
     AnalyzeGoalLineRequest,
     AnalyzeOffsideRequest,
@@ -26,18 +27,17 @@ from settings import Settings, get_settings
 router = APIRouter(prefix="/analyze", tags=["analyze"])
 
 
-def _resolve_clip(clip_id: str, settings: Settings) -> Path:
-    candidates = [
-        settings.samples_path / f"{clip_id}.mp4",
-        settings.samples_path / f"{clip_id}.mov",
-    ]
-    for candidate in candidates:
-        if candidate.exists():
-            return candidate
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"No sample video found for clip_id '{clip_id}'.",
-    )
+def _resolve_source(reference: str) -> ResolvedSource:
+    try:
+        return resolve_match_source(reference)
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)
+        ) from exc
 
 
 def _load_annotations(clip_id: str, settings: Settings) -> dict:
@@ -150,10 +150,10 @@ def analyze_offside(
     settings: Annotated[Settings, Depends(get_settings)],
     _auth: Annotated[AuthContext, Depends(get_auth_context)],
 ) -> OffsideAnalysis:
-    clip_path = _resolve_clip(body.clip_id, settings)
-    calib = load_calibration(body.clip_id)
-    annotations = _load_annotations(body.clip_id, settings)
-    frame = read_frame_ms(clip_path, body.locked_frame_ms)
+    source = _resolve_source(body.source_ref)
+    calib = calibration_from_json(source.clip_id, source.calibration)
+    annotations = _load_annotations(source.clip_id, settings)
+    frame = read_frame_ms(source.local_path, body.locked_frame_ms)
     detections = detect_frame(frame)
 
     if not detections:
@@ -218,6 +218,7 @@ def analyze_offside(
             detection_count=len(detections),
             detection_confidence=_detection_confidence(attacker_det, defender_det, ball_det),
             calibration_quality=_calibration_quality(calib),
+            has_real_calibration=calib.has_real_calibration,
         )
     )
 
@@ -228,8 +229,9 @@ def analyze_goal_line(
     settings: Annotated[Settings, Depends(get_settings)],
     _auth: Annotated[AuthContext, Depends(get_auth_context)],
 ) -> GoalLineAnalysis:
-    clip_path = _resolve_clip(body.clip_id, settings)
-    calib = load_calibration(body.clip_id)
+    source = _resolve_source(body.source_ref)
+    calib = calibration_from_json(source.clip_id, source.calibration)
+    clip_path = source.local_path
     start_ms, end_ms = body.frame_range_ms
     if end_ms <= start_ms:
         raise HTTPException(
@@ -268,5 +270,6 @@ def analyze_goal_line(
             trajectory=trajectory,
             detection_confidence=avg_conf,
             calibration_quality=_calibration_quality(calib),
+            has_real_calibration=calib.has_real_calibration,
         )
     )

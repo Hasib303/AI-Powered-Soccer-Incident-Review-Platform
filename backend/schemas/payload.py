@@ -22,16 +22,39 @@ class Point2D(BaseModel):
 
 
 class AnalyzeOffsideRequest(BaseModel):
-    clip_id: str = Field(description="Logical id matching a file in samples/, e.g. 'clip_offside_01'.")
+    """Either ``match_id`` (UUID of an Atletico match) or ``clip_id`` (legacy
+    sample id like ``clip_offside_01``). At least one is required."""
+
+    match_id: str | None = Field(default=None, description="UUID of the match in Supabase.")
+    clip_id: str | None = Field(
+        default=None,
+        description="Legacy sample id (e.g. 'clip_offside_01'). Used by tests and CLI tools.",
+    )
     locked_frame_ms: int = Field(ge=0, description="Pass/contact frame timestamp in milliseconds.")
     attacking_team: Literal["A", "B"] = Field(
-        description="Which annotated team in the clip is the attacking side."
+        default="A",
+        description="Which annotated team in the clip is the attacking side.",
     )
+
+    @property
+    def source_ref(self) -> str:
+        ref = self.match_id or self.clip_id
+        if not ref:
+            raise ValueError("Either match_id or clip_id must be provided.")
+        return ref
 
 
 class AnalyzeGoalLineRequest(BaseModel):
-    clip_id: str
+    match_id: str | None = None
+    clip_id: str | None = None
     frame_range_ms: tuple[int, int] = Field(description="(start_ms, end_ms) range to track the ball over.")
+
+    @property
+    def source_ref(self) -> str:
+        ref = self.match_id or self.clip_id
+        if not ref:
+            raise ValueError("Either match_id or clip_id must be provided.")
+        return ref
 
 
 class ExtractClipRequest(BaseModel):

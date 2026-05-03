@@ -73,15 +73,15 @@ def _identity_for_dev(clip_id: str) -> Calibration:
     )
 
 
-@lru_cache(maxsize=8)
-def load_calibration(clip_id: str) -> Calibration:
-    settings = get_settings()
-    calib_path: Path = settings.samples_path / f"{clip_id}.calib.json"
+def calibration_from_json(clip_id: str, raw: dict | None) -> Calibration:
+    """Build a ``Calibration`` from an inline JSON payload.
 
-    if not calib_path.exists():
+    When ``raw`` is None or missing the required keys, falls back to an
+    identity-style calibration so the pipeline still runs (useful for
+    uploaded clips before the user has provided 4-point landmarks).
+    """
+    if not raw or "image_points" not in raw or "pitch_points" not in raw:
         return _identity_for_dev(clip_id)
-
-    raw = json.loads(calib_path.read_text())
     homography = _solve_homography(raw["image_points"], raw["pitch_points"])
     return Calibration(
         clip_id=clip_id,
@@ -92,6 +92,19 @@ def load_calibration(clip_id: str) -> Calibration:
         goal_line_x=float(raw.get("goal_line_x", 105.0)),
         has_real_calibration=True,
     )
+
+
+@lru_cache(maxsize=8)
+def load_calibration(clip_id: str) -> Calibration:
+    """Legacy: load a sample clip's `<clip_id>.calib.json` from disk."""
+    settings = get_settings()
+    calib_path: Path = settings.samples_path / f"{clip_id}.calib.json"
+
+    if not calib_path.exists():
+        return _identity_for_dev(clip_id)
+
+    raw = json.loads(calib_path.read_text())
+    return calibration_from_json(clip_id, raw)
 
 
 def project_image_to_pitch(point_xy: tuple[float, float], calib: Calibration) -> tuple[float, float]:
