@@ -30,6 +30,7 @@ class OffsideInputs:
     detection_count: int = 0
     detection_confidence: float = 1.0
     calibration_quality: float = 1.0
+    has_real_calibration: bool = True
 
 
 def _ahead(point_x: float, reference_x: float, direction: Literal["left", "right"]) -> float:
@@ -86,6 +87,13 @@ def compute_offside(inputs: OffsideInputs) -> OffsideAnalysis:
         f"Confidence {confidence:.2f} (geometry margin {margin:.2f} m, "
         f"detection {inputs.detection_confidence:.2f}, calibration {inputs.calibration_quality:.2f})."
     )
+
+    if not inputs.has_real_calibration:
+        rationale.append(
+            "Note: this match has no homography calibration, so distances above "
+            "are pixel-relative. Verdict (offside vs onside) is still based on "
+            "relative positions and remains valid."
+        )
 
     if confidence < 0.4 and verdict != "human_review_required":
         verdict = "human_review_required"

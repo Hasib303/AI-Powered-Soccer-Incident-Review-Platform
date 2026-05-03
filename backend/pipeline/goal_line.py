@@ -23,6 +23,7 @@ class GoalLineInputs:
     trajectory: list[tuple[int, Point2D]]  # (frame_ms, pitch position)
     detection_confidence: float = 1.0
     calibration_quality: float = 1.0
+    has_real_calibration: bool = True
 
 
 def _crossed(ball_x: float, goal_line_x: float, direction: Literal["left", "right"]) -> float:
@@ -81,6 +82,12 @@ def compute_goal_line(inputs: GoalLineInputs) -> GoalLineAnalysis:
         f"Confidence {confidence:.2f} (margin {margin:.2f} m, "
         f"detection {inputs.detection_confidence:.2f}, calibration {inputs.calibration_quality:.2f})."
     )
+
+    if not inputs.has_real_calibration:
+        rationale.append(
+            "Note: this match has no homography calibration, so the goal-line "
+            "crossing margin is pixel-relative."
+        )
 
     if confidence < 0.4:
         verdict = "human_review_required"
