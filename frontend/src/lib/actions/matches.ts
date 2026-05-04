@@ -8,20 +8,34 @@ import { requireRole } from "@/lib/auth";
 import { createSupabaseServer, createSupabaseServiceRole } from "@/lib/supabase/server";
 import { UuidLike } from "@/lib/zod";
 
-const CreateMatchSchema = z.object({
-  league_id: UuidLike,
-  home_team_id: UuidLike,
-  away_team_id: UuidLike,
-  kickoff_at: z.string().min(1),
-  venue: z.string().trim().max(120).optional(),
-  video_source_path: z
-    .string()
-    .min(1, "Upload a video before creating the match.")
-    .max(500),
-  // Uploaded matches default to `completed` (post-match recording). Streams
-  // transition the row to `live` via /streams/start.
-  status: z.enum(["scheduled", "live", "completed"]).default("completed"),
-});
+const CreateMatchSchema = z
+  .object({
+    league_id: UuidLike,
+    home_team_id: UuidLike,
+    away_team_id: UuidLike,
+    kickoff_at: z.string().min(1),
+    venue: z.string().trim().max(120).optional(),
+    // "upload" → MP4 in Supabase Storage; "stream" → live RTMP/HLS URL.
+    source_kind: z.enum(["upload", "stream"]).default("upload"),
+    video_source_path: z.string().max(500).optional(),
+    video_stream_url: z.string().max(500).optional(),
+    // Uploaded matches default to `completed` (post-match recording). Streams
+    // transition the row to `live` automatically via the action below.
+    status: z.enum(["scheduled", "live", "completed"]).default("completed"),
+  })
+  .refine(
+    (data) => {
+      if (data.source_kind === "upload") return !!data.video_source_path;
+      // For stream sources, accept rtmp(s):// or http(s)://
+      const url = data.video_stream_url?.trim() ?? "";
+      return /^(rtmps?|https?):\/\//i.test(url);
+    },
+    {
+      message:
+        "Provide a video file (upload) or a valid RTMP/HLS URL (live stream).",
+      path: ["video_source_path"],
+    },
+  );
 
 const SaveCalibrationSchema = z.object({
   match_id: UuidLike,
@@ -61,6 +75,14 @@ export async function createMatchAction(
   const session = await requireRole("official", "admin");
   const supabase = await createSupabaseServer();
 
+  const isStream = parsed.data.source_kind === "stream";
+  const streamUrl = parsed.data.video_stream_url?.trim() ?? "";
+  const videoKind: "upload" | "rtmp" | "hls" = isStream
+    ? streamUrl.toLowerCase().startsWith("rtmp")
+      ? "rtmp"
+      : "hls"
+    : "upload";
+
   const { data, error } = await supabase
     .from("matches")
     .insert({
@@ -70,9 +92,11 @@ export async function createMatchAction(
       away_team_id: parsed.data.away_team_id,
       kickoff_at: new Date(parsed.data.kickoff_at).toISOString(),
       venue: parsed.data.venue ?? null,
-      status: parsed.data.status,
-      video_source_kind: "upload",
-      video_source_path: parsed.data.video_source_path,
+      // Live streams flip the match into "live" the moment they're created.
+      status: isStream ? "live" : parsed.data.status,
+      video_source_kind: videoKind,
+      video_source_path: isStream ? null : parsed.data.video_source_path,
+      video_stream_url: isStream ? streamUrl : null,
     })
     .select("id")
     .single();
@@ -106,8 +130,27 @@ export async function createMatchAction(
     action: "match.created",
     target_type: "match",
     target_id: data.id,
-    payload: { kind: "upload", video_source_path: parsed.data.video_source_path },
+    payload: isStream
+      ? { kind: videoKind, video_stream_url: streamUrl }
+      : { kind: "upload", video_source_path: parsed.data.video_source_path },
   });
+
+  // For live streams, kick off the FFmpeg ingest worker now so the user
+  // doesn't have to make a second click on the /stream page. Failure here
+  // is non-fatal — the match still exists and they can retry on /stream.
+  if (isStream) {
+    const aiUrl = process.env.AI_SERVICE_URL ?? "http://127.0.0.1:8000";
+    try {
+      await fetch(`${aiUrl}/streams/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ match_id: data.id, source_url: streamUrl }),
+        cache: "no-store",
+      });
+    } catch {
+      // Swallow — the user can connect manually on the stream page.
+    }
+  }
 
   revalidatePath("/official/assignments");
   return { ok: true, matchId: data.id };
