@@ -1,34 +1,29 @@
 # Atlético Intelligence
 
-**AI-powered single-camera soccer incident review platform** for grassroots
-and semi-professional leagues. Match officials trigger an instant video
-review on a single fixed camera; the system runs computer vision on the
-locked frame, returns a verdict (offside / goal / human-review-required)
-within ~2 seconds, and renders a top-down pitch diagram with the offside
-line drawn at the second-last defender or the ball trajectory across the
-goal-line window.
+**AI-powered single-camera soccer incident review platform** for grassroots and semi-professional leagues. Match officials trigger an instant video review on a single fixed camera; the system runs computer vision on the locked frame, returns a verdict (offside / goal / human-review-required), and renders a top-down pitch diagram with the offside line drawn at the second-last defender or the ball trajectory across the goal-line window.
 
-Built against the BRD at `BRD for Atlético Intelligence — AI-Powered Soccer
-Incident Review Platform.pdf`. MVP scope = Offside review (primary) + Goal
-review (simpler / partially automated). Foul / handball / penalty / red-card
-flows are intentionally out of scope per BRD §2.2.
+Built against the BRD at `BRD for Atlético Intelligence — AI-Powered Soccer Incident Review Platform.pdf`. MVP scope = Offside review (primary) + Goal review (simpler / partially automated). Foul / handball / penalty / red-card flows are intentionally out of scope per BRD §2.2.
 
 ---
 
 ## 🚀 Live demo
 
-| Surface | URL | Notes |
-| - | - | - |
-| **Frontend** | https://ai-powered-soccer-incident-review-p.vercel.app | Vercel free tier, auto-deploys from `main` |
-| **Backend (AI/CV service)** | https://hasib303-atletico-backend.hf.space | Hugging Face Space, free CPU tier; FastAPI Swagger at `/docs` |
-| **Source code** | https://github.com/Hasib303/AI-Powered-Soccer-Incident-Review-Platform | Mono-repo |
+
+| Surface                     | URL                                                                                                                                              | Notes                                                         |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| **Frontend**                | [https://ai-powered-soccer-incident-review-p.vercel.app](https://ai-powered-soccer-incident-review-p.vercel.app)                                 | Vercel free tier, auto-deploys from `main`                    |
+| **Backend (AI/CV service)** | [https://hasib303-atletico-backend.hf.space](https://hasib303-atletico-backend.hf.space)                                                         | Hugging Face Space, free CPU tier; FastAPI Swagger at `/docs` |
+| **Source code**             | [https://github.com/Hasib303/AI-Powered-Soccer-Incident-Review-Platform](https://github.com/Hasib303/AI-Powered-Soccer-Incident-Review-Platform) | Mono-repo                                                     |
+
 
 ### Demo credentials
 
-| Role | Email | Password |
-| - | - | - |
+
+| Role           | Email                        | Password                |
+| -------------- | ---------------------------- | ----------------------- |
 | Match Official | `official@demo.atletico.app` | `AtleticoOfficial!2026` |
-| Team Viewer | `viewer@demo.atletico.app` | `AtleticoViewer!2026` |
+| Team Viewer    | `viewer@demo.atletico.app`   | `AtleticoViewer!2026`   |
+
 
 > The HF Space sleeps after ~15 minutes of inactivity. The first request
 > after sleep takes 30+ seconds while the container wakes up; subsequent
@@ -79,9 +74,9 @@ docker compose up --build
 
 After ~5–10 minutes (first build downloads PyTorch + ultralytics + YOLO weights), the stack is up:
 
-- Frontend: <http://localhost:3000>
-- Backend: <http://localhost:8000>
-- Backend Swagger: <http://localhost:8000/docs>
+- Frontend: [http://localhost:3000](http://localhost:3000)
+- Backend: [http://localhost:8000](http://localhost:8000)
+- Backend Swagger: [http://localhost:8000/docs](http://localhost:8000/docs)
 
 Subsequent boots take seconds (cached layers).
 
@@ -92,7 +87,7 @@ Subsequent boots take seconds (cached layers).
 ### Prerequisites
 
 - Node 20+
-- Python 3.12 (managed by [`uv`](https://docs.astral.sh/uv/))
+- Python 3.12 (managed by `[uv](https://docs.astral.sh/uv/)`)
 - `pnpm` (`npm install -g pnpm`)
 - `ffmpeg` (`brew install ffmpeg` on macOS)
 - A Supabase project ([free signup, no card](https://supabase.com))
@@ -153,7 +148,7 @@ pnpm install
 pnpm dev
 ```
 
-Open <http://localhost:3000>, sign in with the demo official account,
+Open [http://localhost:3000](http://localhost:3000), sign in with the demo official account,
 and walk through the 12-step demo path documented in `TESTING.md`.
 
 ---
@@ -164,46 +159,31 @@ and walk through the 12-step demo path documented in `TESTING.md`.
 
 - **My Assignments** — table of matches assigned to the official
 - **New Match** — upload an MP4 (≤500 MB) **or** connect a live RTMP/HLS
-  stream (e.g., `https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8`)
-  for real-time analysis
+stream (e.g., `https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8`)
+for real-time analysis
 - **Live Console** — video preview with custom timeline scrubber,
-  Offside / Goal Check action buttons, real-time match log fed by
-  Supabase Realtime, color-coded stream-status banner
+Offside / Goal Check action buttons, real-time match log fed by
+Supabase Realtime, color-coded stream-status banner
 - **Offside Review** — click Offside Check, scrub to the moment the ball
-  is played, click Review This Frame; YOLO identifies attacker /
-  second-last defender / ball, projects to pitch metres via 4-point
-  homography, computes verdict + confidence + rationale
+is played, click Review This Frame; YOLO identifies attacker /
+second-last defender / ball, projects to pitch metres via 4-point
+homography, computes verdict + confidence + rationale
 - **Goal-Line Review** — click Goal Check, scrub to ~1 s before the ball
-  reaches the line; system samples 13 frames across a 4.5-second window,
-  tracks the ball, checks ball-radius crossing
+reaches the line; system samples 13 frames across a 4.5-second window,
+tracks the ball, checks ball-radius crossing
 - **Incident Detail** — verdict card + confidence bar + AI rationale +
-  top-down SVG pitch diagram + 300-char referee note (profanity-filtered)
-  + download / delete clip (incident metadata persists per BRD §3.3)
+top-down SVG pitch diagram + 300-char referee note (profanity-filtered)
+  - download / delete clip (incident metadata persists per BRD §3.3)
 - **Live Stream Connect** — separate page to attach an RTMP/HLS source
-  to an existing match; FFmpeg-based ingest worker maintains a 30-second
-  rolling buffer, with `connecting → connected → buffering → reconnecting`
-  state machine and exponential-backoff reconnect
+to an existing match; FFmpeg-based ingest worker maintains a 30-second
+rolling buffer, with `connecting → connected → buffering → reconnecting`
+state machine and exponential-backoff reconnect
 
 ### Team Viewer surface
 
 - **Match History** — list of recent matches the viewer's team is on
-- **Read-only incident detail** — same VerdictCard + PitchDiagram as
-  the official's view, but action buttons hidden, note input read-only
-- **RLS-enforced isolation** — viewers can only see incidents with
-  `status='ready'` and `deleted_clip_at IS NULL`. Even guessing an
-  incident URL returns 404 if the row isn't in their visible set.
-
-### Tech notes
-
-- **Real YOLOv8n inference** on CPU, ~100–300 ms per frame at imgsz=1920
-- **Honest confidence scoring** — verdicts below 0.4 confidence
-  auto-flip to `human_review_required` per BRD §2.3
-- **Real-time UI updates** — both incidents and stream state push
-  through Supabase Realtime channels
-- **Per-match calibration** stored as a `jsonb` column; sample matches
-  ship with hand-coded 4-point homography
-- **18 automated tests** (14 unit on pure-function geometry + 4
-  endpoint smoke tests against real YOLO inference on real sample clips)
+- **Read-only incident detail** — same VerdictCard + PitchDiagram as the official's view, but action buttons hidden, note input read-only
+- **RLS-enforced isolation** — viewers can only see incidents with `status='ready'` and `deleted_clip_at IS NULL`. Even guessing an incident URL returns 404 if the row isn't in their visible set.
 
 ---
 
@@ -237,7 +217,7 @@ and walk through the 12-step demo path documented in `TESTING.md`.
 
 ## 🧪 Testing
 
-Full step-by-step verification runbook in [`TESTING.md`](./TESTING.md).
+Full step-by-step verification runbook in `[TESTING.md](./TESTING.md)`.
 Quick version:
 
 ```bash
@@ -257,35 +237,9 @@ cd frontend && pnpm build                   # 12 routes registered
 
 ## 📚 Reference docs
 
-- [`backend/README.md`](./backend/README.md) — service layout, run instructions, deployment notes (also doubles as the HF Space's metadata card)
-- [`frontend/README.md`](./frontend/README.md) — routes, lib/ utilities, Vercel deploy notes
-- [`backend/migrations/README.md`](./backend/migrations/README.md) — how to apply the migrations to a Supabase Cloud or local-Docker project
-- [`TESTING.md`](./TESTING.md) — every feature with concrete pass criteria + failure-mode → fix mapping
+- `[backend/README.md](./backend/README.md)` — service layout, run instructions, deployment notes (also doubles as the HF Space's metadata card)
+- `[frontend/README.md](./frontend/README.md)` — routes, lib/ utilities, Vercel deploy notes
+- `[backend/migrations/README.md](./backend/migrations/README.md)` — how to apply the migrations to a Supabase Cloud or local-Docker project
+- `[TESTING.md](./TESTING.md)` — every feature with concrete pass criteria + failure-mode → fix mapping
 - BRD PDF (locally only) — `BRD for Atlético Intelligence — AI-Powered Soccer Incident Review Platform.pdf`
 
----
-
-## 🛣️ Roadmap
-
-The current platform delivers the BRD MVP. Items intentionally deferred
-to follow-up phases:
-
-- **Auto pitch-line detection** for upload calibration (currently uses a
-  manual 4-point JSON; auto-detection is multi-week work — Hough lines or
-  HRNet-Seg fine-tuned on pitch markings)
-- **HRNet-Pose body-part detection** for production-grade offside (real
-  offside law uses the most-forward scoring body part, not feet)
-- **Soccer-specific YOLO fine-tuning** to push ball-detection confidence
-  above 0.6 on amateur footage (current `yolov8n.pt` is COCO-trained)
-- **GPU-accelerated inference** via Modal / Replicate for sub-100 ms
-  per-frame analysis
-- **Admin CRUD UI** for league / team / officials management (currently
-  done via SQL only)
-- **90-minute live-stream soak testing** (current reconnect prototype is
-  proven on the Mux test stream; full match endurance unverified)
-
----
-
-## 📄 License
-
-MIT.
