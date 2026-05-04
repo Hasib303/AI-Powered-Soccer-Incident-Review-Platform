@@ -40,9 +40,27 @@ export const ClipPlayer = forwardRef<ClipPlayerHandle, ClipPlayerProps>(
     }, []);
 
     // HLS playback: Safari supports m3u8 natively; Chrome / Firefox need hls.js.
+    //
+    // Important: Supabase signed URLs include a `?token=…` query param that
+    // refreshes on every revalidatePath. We must NOT reset `v.src` when only
+    // the query string changed (same pathname / origin) — otherwise the
+    // playhead jumps back to 00:00.00 every time the parent re-renders,
+    // which destroys the user's scrub position right before they click
+    // "Review this frame".
     useEffect(() => {
       const v = videoRef.current;
       if (!v || !src) return;
+      const samePath = (() => {
+        if (!v.src || v.src === window.location.href) return false;
+        try {
+          const a = new URL(src, window.location.href);
+          const b = new URL(v.src, window.location.href);
+          return a.origin === b.origin && a.pathname === b.pathname;
+        } catch {
+          return false;
+        }
+      })();
+      if (samePath) return; // signed URL refreshed — keep current playhead
       const isHls = /\.m3u8(\?|$)/i.test(src);
       if (!isHls) {
         v.src = src;
