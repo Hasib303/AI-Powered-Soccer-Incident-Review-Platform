@@ -1,3 +1,14 @@
+---
+title: Atletico Intelligence Backend
+emoji: ⚽
+colorFrom: green
+colorTo: blue
+sdk: docker
+app_port: 8000
+pinned: false
+short_description: Single-camera AI/CV service for offside and goal-line review.
+---
+
 # Atletico Intelligence — Backend
 
 Python FastAPI service for single-camera soccer incident review (offside +
