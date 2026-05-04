@@ -6,7 +6,7 @@ colorTo: blue
 sdk: docker
 app_port: 8000
 pinned: false
-short_description: Single-camera AI/CV service for offside and goal-line review.
+short_description: Single-camera AI for offside and goal-line review.
 ---
 
 # Atletico Intelligence — Backend
