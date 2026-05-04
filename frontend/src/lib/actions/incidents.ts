@@ -90,7 +90,11 @@ export async function createIncidentAction(input: {
 
   if (error || !data) return { ok: false, message: error?.message ?? "Insert failed." };
 
-  revalidatePath(`/official/matches/${parsed.data.matchId}/console`);
+  // Don't revalidate the console page here — the client subscribes to
+  // incidents via Supabase Realtime and updates the match log itself.
+  // Re-rendering the console would mint a fresh signed video URL, which
+  // resets the user's scrubbed playhead to 00:00.00 right before they
+  // click "Review this frame". The incidents-log page can refresh.
   revalidatePath(`/official/matches/${parsed.data.matchId}/incidents`);
   return { ok: true, incidentId: data.id };
 }
