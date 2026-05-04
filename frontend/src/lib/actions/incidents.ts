@@ -15,7 +15,12 @@ import type {
   IncidentType,
 } from "@/lib/database.types";
 
-const HUMAN_REVIEW_THRESHOLD = 0.6;
+// Confidence below this value flips the verdict to `human_review_required`
+// per BRD §2.3. Env-driven so demos can lower it (e.g., 0.4) without
+// touching code, while production keeps a stricter default.
+const HUMAN_REVIEW_THRESHOLD = Number(
+  process.env.HUMAN_REVIEW_THRESHOLD ?? "0.4",
+);
 
 // ---------------------------------------------------------------------------
 // Schemas
